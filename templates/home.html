@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- icon -->
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Potato Meet</title>
+</head>
+<body>
+    <h2>Hello world!</h2>
+    <h3>Welcome to free video chat room!</h3>
+    <hr>
+    <p style="color: rgb(136, 136, 136);">This is completely unreliable and insecure!</p>
+    <form method="POST">
+        <label style="font-size: 24px; text-align: center; color: rgb(52, 125, 228);" for="room_id">Enter a room name and join!</label>
+        <input type="text" name="room_id" id="room_id">
+        <input type="submit" value="Join">
+    </form>
+</body>
+<script type="text/javascript">
+    var arr = [0,1,2,3,4,5,6,7,8,9];
+
+    function make_function(num)
+    {
+        function f()
+        {
+            console.log("function ", num, " called!");
+            if(num<arr.length && num>=0)
+            {
+                arr[num] = num*num;
+            }
+        }
+
+        return f;
+    }
+
+    console.log(arr);
+
+    for(var i=2;i<6;i++)
+    {
+        let f = make_function(i);
+        f();
+    }
+
+    console.log(arr);
+</script>
+</html>

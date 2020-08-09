@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- icon -->
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    <!-- socketio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js" integrity="sha512-v8ng/uGxkge3d1IJuEo6dJP8JViyvms0cly9pnbfRxT6/31c3dRWxIiwGnMSWwZjHKOuY3EVmijs7k1jz/9bLA==" crossorigin="anonymous"></script>
+    
+    <script type="text/javascript"> var myRoomID = "{{room_id}}"; </script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Potato Meet</title>
+</head>
+<body>
+    <h2>Welcome to {{room_id}}</h2>
+    <p>Ask your friends to join using room id: {{room_id}}</p>
+    <hr>
+    
+    <div id="video_grid" class="grid-container">
+        <video id="local_vid" class="grid-item" autoplay muted></video>
+    </div>
+
+    <div id="log"></div>
+</body>
+
+<script type="text/javascript">
+    var myID;
+    var _peer_list = {};
+    var logger = document.getElementById("log");
+    var myVideo = document.getElementById("local_vid");
+    myVideo.onloadeddata = ()=>{console.log("W,H: ", myVideo.videoWidth, ", ", myVideo.videoHeight);};
+    var videoGrid = document.getElementById("video_grid");
+
+    var mediaConstraints = {
+        audio: true, // We want an audio track
+        video: {
+            height: 360
+        } // ...and we want a video track
+    };
+    
+    // socketio setup
+    var protocol = window.location.protocol;
+    var socket = io.connect(protocol + '//' + document.domain + ':' + location.port);
+
+    socket.on("connect", ()=>{
+        console.log("socket connected....");
+        socket.emit("join-room", {"room_id": myRoomID});
+    });
+
+    function addVideoElement(peer_id)
+    {
+        let vid = document.createElement("video");
+        vid.id = peer_id;
+        vid.className = "grid-item";
+        vid.autoplay = true;
+        videoGrid.appendChild(vid);
+    }
+    function getVideoElement(peer_id)
+    {
+        return document.getElementById(peer_id);
+    }
+    function removeVideoElement(peer_id)
+    {
+        getVideoElement(peer_id).remove();
+    }
+    socket.on("user-connect", (data)=>{
+        console.log("user-connect ", data);
+        let peer_id = data["sid"];
+        _peer_list[peer_id] = undefined; // add new user to user list
+        log_user_list();
+        addVideoElement(peer_id);
+    });
+    socket.on("user-disconnect", (data)=>{
+        console.log("user-disconnect ", data);
+        let peer_id = data["sid"];
+        delete _peer_list[peer_id]; // remove user from user list
+        log_user_list();
+        removeVideoElement(peer_id);
+    });
+    socket.on("user-list", (data)=>{
+        console.log("user list recvd ", data);
+        myID = data["my_id"];
+        if( "list" in data) // not the first to connect to room
+        {
+            let recvd_list = data["list"];        
+            recvd_list.forEach((peer_id)=>{
+                _peer_list[peer_id] = undefined;
+                addVideoElement(peer_id);
+            }); // add existing users to user list
+
+            log_user_list();
+
+            start_webrtc();
+        }
+        else // first user to connect
+        {
+            navigator.mediaDevices.getUserMedia(mediaConstraints)
+            .then((stream)=>{
+                myVideo.srcObject = stream;                
+            })
+            .catch((e)=>{
+                alert("Error! Unable to start video! ", e);
+            });
+        }
+
+        
+    });
+
+    function log_user_list()
+    {
+        logger.innerText = "";
+        for(let key in _peer_list)
+        {
+            logger.innerText += `${key}:${_peer_list[key]}\n`;
+        }
+    }
+
+    //---------------webrtc--------------------
+
+    
+
+    var PC_CONFIG = {
+        iceServers: [
+            {
+                urls: ['stun:stun.l.google.com:19302', 
+                        'stun:stun1.l.google.com:19302',
+                        'stun:stun2.l.google.com:19302',
+                        'stun:stun3.l.google.com:19302',
+                        'stun:stun4.l.google.com:19302'
+                    ]
+            },
+        ]
+    };
+
+    function log_error(e){console.log("[ERROR] ", e);}
+    function sendViaServer(data){socket.emit("data", data);}
+
+    socket.on("data", (msg)=>{
+        switch(msg["type"])
+        {
+            case "offer":
+                handleOfferMsg(msg);
+                break;
+            case "answer":
+                handleAnswerMsg(msg);
+                break;
+            case "new-ice-candidate":
+                handleNewICECandidateMsg(msg);
+                break;
+        }
+    });
+
+    function start_webrtc()
+    {
+        navigator.mediaDevices.getUserMedia(mediaConstraints)
+        .then((stream)=>{
+            myVideo.srcObject = stream;
+
+            // send offer to all other members
+            for(let peer_id in _peer_list)
+            {
+                invite(peer_id);
+            }
+        })
+        .catch((e)=>{
+            console.log("Error! Unable to start video! ", e);
+        });
+    }
+
+    function invite(peer_id)
+    {
+        if(_peer_list[peer_id]){console.log("[Not supposed to happen!] Attempting to start a connection that already exists!")}
+        else if(peer_id === myID){console.log("[Not supposed to happen!] Trying to connect to self!");}
+        else
+        {
+            console.log(`Creating peer connection for <${peer_id}> ...`);
+            createPeerConnection(peer_id);
+
+            let local_stream = myVideo.srcObject;
+            local_stream.getTracks().forEach((track)=>{_peer_list[peer_id].addTrack(track, local_stream);});
+        }
+    }
+
+    function createPeerConnection(peer_id)
+    {
+        _peer_list[peer_id] = new RTCPeerConnection(PC_CONFIG);
+
+        _peer_list[peer_id].onicecandidate = make_ICECandidateEvent_handler(peer_id);
+        _peer_list[peer_id].ontrack = make_TrackEvent_handler(peer_id);
+        _peer_list[peer_id].onnegotiationneeded = make_NegotiationNeededEvent_handler(peer_id);
+        // myPeerConnection.onremovetrack = handleRemoveTrackEvent;
+        // myPeerConnection.oniceconnectionstatechange = handleICEConnectionStateChangeEvent;
+        // myPeerConnection.onicegatheringstatechange = handleICEGatheringStateChangeEvent;
+        // myPeerConnection.onsignalingstatechange = handleSignalingStateChangeEvent;
+    }
+
+    
+    function make_NegotiationNeededEvent_handler(peer_id)
+    {
+        function handleNegotiationNeededEvent()
+        {
+            _peer_list[peer_id].createOffer()
+            .then((offer)=>{return _peer_list[peer_id].setLocalDescription(offer);})
+            .then(()=>{
+                console.log(`sending offer to <${peer_id}> ...`);
+                sendViaServer({
+                    "sender_id": myID,
+                    "target_id": peer_id,
+                    "type": "offer",
+                    "sdp": _peer_list[peer_id].localDescription
+                });
+            })
+            .catch(log_error);
+        }
+
+        return handleNegotiationNeededEvent;
+    }    
+
+    function handleOfferMsg(msg)
+    {   
+        peer_id = msg['sender_id'];
+
+        console.log(`offer recieved from <${peer_id}>`);
+        
+        createPeerConnection(peer_id);
+        let desc = new RTCSessionDescription(msg['sdp']);
+        _peer_list[peer_id].setRemoteDescription(desc)
+        .then(()=>{
+            let local_stream = myVideo.srcObject;
+            local_stream.getTracks().forEach((track)=>{_peer_list[peer_id].addTrack(track, local_stream);});
+        })
+        .then(()=>{return _peer_list[peer_id].createAnswer();})
+        .then((answer)=>{return _peer_list[peer_id].setLocalDescription(answer);})
+        .then(()=>{
+            sendViaServer({
+                "sender_id": myID,
+                "target_id": peer_id,
+                "type": "answer",
+                "sdp": _peer_list[peer_id].localDescription
+            });
+        })
+        .catch(log_error);
+    }
+
+    function handleAnswerMsg(msg)
+    {
+        peer_id = msg['sender_id'];
+        console.log(`answer recieved from <${peer_id}>`);
+        let desc = new RTCSessionDescription(msg['sdp']);
+        _peer_list[peer_id].setRemoteDescription(desc)
+    }
+
+
+    function make_ICECandidateEvent_handler(peer_id)
+    {
+        function handleICECandidateEvent(event)
+        {
+            if(event.candidate){
+                sendViaServer({
+                    "sender_id": myID,
+                    "target_id": peer_id,
+                    "type": "new-ice-candidate",
+                    "candidate": event.candidate
+                });
+            }
+        }
+
+        return handleICECandidateEvent;
+    }
+
+    function handleNewICECandidateMsg(msg)
+    {
+        var candidate = new RTCIceCandidate(msg.candidate);
+        _peer_list[msg["sender_id"]].addIceCandidate(candidate)
+        .catch(log_error);
+    }
+
+
+    function make_TrackEvent_handler(peer_id)
+    {
+        function handleTrackEvent(event)
+        {
+            console.log(`track event recieved from <${peer_id}> : ${event}`);
+            
+            if(event.streams)
+            {
+                getVideoElement(peer_id).srcObject = event.streams[0];
+            }
+        }
+
+        return handleTrackEvent;
+    }
+
+
+
+</script>
+
+<style type="text/css">
+    .grid-container{
+        display: grid;
+        grid-template-columns: 25% 25% 25% 25%;
+    }
+    .grid-item {
+        background-color: rgba(221, 221, 221, 0.8);
+        border: 1px solid rgba(0, 194, 42, 0.8);
+        padding: 2px;
+        text-align: center;
+        width: 98%;
+    }
+    video .grid-item{
+        width: 98%;
+        /* object-fit: contain; */
+    }
+
+</style>
+
+</html>
