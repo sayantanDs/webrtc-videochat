@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- icon -->
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <h3>You are about to join the room: {{room_id}}</h3>
+    <form method="POST">
+        <label style="font-size: 20px; text-align: center; color: rgb(52, 125, 228);" for="display_name">What should others see you as?</label>
+        <input type="text" name="display_name" id="display_name" placeholder="Display Name">
+        <input type="submit" value="Join">
+    </form>
+    
+</body>
+</html>

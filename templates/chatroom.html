@@ -7,7 +7,7 @@
     <!-- socketio -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js" integrity="sha512-v8ng/uGxkge3d1IJuEo6dJP8JViyvms0cly9pnbfRxT6/31c3dRWxIiwGnMSWwZjHKOuY3EVmijs7k1jz/9bLA==" crossorigin="anonymous"></script>
     
-    <script type="text/javascript"> var myRoomID = "{{room_id}}"; </script>
+    <script type="text/javascript"> var myRoomID = "{{room_id}}"; var myName = "{{display_name}}"; </script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,23 +15,53 @@
 </head>
 <body>
     <h2>Welcome to {{room_id}}</h2>
+    <h4>You have joined as {{display_name}}</h4>
     <p>Ask your friends to join using room id: {{room_id}}</p>
     <hr>
     
     <div id="video_grid" class="grid-container">
-        <video id="local_vid" class="grid-item" autoplay muted></video>
+        <!-- <video id="local_vid" class="grid-item" autoplay muted></video> -->
     </div>
 
     <div id="log"></div>
 </body>
 
 <script type="text/javascript">
+    var videoGrid = document.getElementById("video_grid");
+    function addVideoElement(element_id, display_name)
+    {
+        let d = document.createElement("div");
+        d.id = "vid_"+element_id;
+        d.className = "grid-item";
+        let vid = document.createElement("video");
+        vid.autoplay = true;
+        let text = document.createElement("div");
+        text.className = "display-name";
+        text.innerText = display_name;
+        d.appendChild(vid);
+        d.appendChild(text);
+        videoGrid.appendChild(d);
+    }
+    function getVideoElement(element_id)
+    {
+        return document.querySelector("#vid_"+element_id+" video");
+    }
+    function removeVideoElement(peer_id)
+    {
+        document.getElementById("vid_"+peer_id).remove();
+    }
+    
     var myID;
     var _peer_list = {};
     var logger = document.getElementById("log");
-    var myVideo = document.getElementById("local_vid");
+    addVideoElement("local_vid", myName);
+    var myVideo = getVideoElement("local_vid");
+    myVideo.muted = true;
     myVideo.onloadeddata = ()=>{console.log("W,H: ", myVideo.videoWidth, ", ", myVideo.videoHeight);};
-    var videoGrid = document.getElementById("video_grid");
+
+    var log_bttn = document.createElement("button");
+    log_bttn.onclick = log_user_list;
+    
 
     var mediaConstraints = {
         audio: true, // We want an audio track
@@ -49,28 +79,14 @@
         socket.emit("join-room", {"room_id": myRoomID});
     });
 
-    function addVideoElement(peer_id)
-    {
-        let vid = document.createElement("video");
-        vid.id = peer_id;
-        vid.className = "grid-item";
-        vid.autoplay = true;
-        videoGrid.appendChild(vid);
-    }
-    function getVideoElement(peer_id)
-    {
-        return document.getElementById(peer_id);
-    }
-    function removeVideoElement(peer_id)
-    {
-        getVideoElement(peer_id).remove();
-    }
+    
     socket.on("user-connect", (data)=>{
         console.log("user-connect ", data);
         let peer_id = data["sid"];
+        let display_name = data["name"];
         _peer_list[peer_id] = undefined; // add new user to user list
         log_user_list();
-        addVideoElement(peer_id);
+        addVideoElement(peer_id, display_name);
     });
     socket.on("user-disconnect", (data)=>{
         console.log("user-disconnect ", data);
@@ -84,11 +100,15 @@
         myID = data["my_id"];
         if( "list" in data) // not the first to connect to room
         {
-            let recvd_list = data["list"];        
-            recvd_list.forEach((peer_id)=>{
+            let recvd_list = data["list"];  
+
+            // add existing users to user list
+            for(peer_id in recvd_list)
+            {
+                display_name = recvd_list[peer_id];
                 _peer_list[peer_id] = undefined;
-                addVideoElement(peer_id);
-            }); // add existing users to user list
+                addVideoElement(peer_id, display_name);
+            }            
 
             log_user_list();
 
@@ -299,19 +319,31 @@
 
 <style type="text/css">
     .grid-container{
-        display: grid;
-        grid-template-columns: 25% 25% 25% 25%;
+        display: flex;
+        flex-wrap: wrap;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        background-color: rgb(221, 221, 221);
     }
     .grid-item {
-        background-color: rgba(221, 221, 221, 0.8);
-        border: 1px solid rgba(0, 194, 42, 0.8);
-        padding: 2px;
+        background-color: rgb(255, 255, 255);
+        border: 1px solid rgb(0, 255, 0);
+        padding: 0px;
         text-align: center;
-        width: 98%;
+
+        max-width: fit-content;        
+        flex: 1 1 480px;
     }
-    video .grid-item{
-        width: 98%;
-        /* object-fit: contain; */
+    .grid-item video{
+        /* width: 95%; */
+        object-fit: contain;
+        padding: 5px;
+    }
+    .grid-item .display-name{
+        font-weight:lighter;
+        font-size: 20px;
+        padding: 3px;
     }
 
 </style>
