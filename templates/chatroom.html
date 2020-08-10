@@ -18,10 +18,12 @@
     <h4>You have joined as {{display_name}}</h4>
     <p>Ask your friends to join using room id: {{room_id}}</p>
     <hr>
-    
+
     <div id="video_grid" class="grid-container">
-        <!-- <video id="local_vid" class="grid-item" autoplay muted></video> -->
+
+        <div id="control_box" class="control-box"></div>
     </div>
+    
 
     <div id="log"></div>
 </body>
@@ -30,37 +32,46 @@
     var videoGrid = document.getElementById("video_grid");
     function addVideoElement(element_id, display_name)
     {
-        let d = document.createElement("div");
-        d.id = "vid_"+element_id;
-        d.className = "grid-item";
+        let wrapper_div = document.createElement("div");
+        let vid_wrapper = document.createElement("div");
         let vid = document.createElement("video");
-        vid.autoplay = true;
-        let text = document.createElement("div");
-        text.className = "display-name";
-        text.innerText = display_name;
-        d.appendChild(vid);
-        d.appendChild(text);
-        videoGrid.appendChild(d);
+        let name_text = document.createElement("div");
+
+        wrapper_div.id = "div_"+element_id;
+        wrapper_div.className = "grid-item";
+        vid_wrapper.className = "vid-wrapper";
+        vid.id = "vid_"+element_id;
+        vid.autoplay = true;        
+        name_text.className = "display-name";
+        name_text.innerText = display_name;
+
+        vid_wrapper.appendChild(vid)
+        wrapper_div.appendChild(vid_wrapper);
+        wrapper_div.appendChild(name_text);
+        videoGrid.appendChild(wrapper_div);
     }
-    function getVideoElement(element_id)
+    function removeVideoElement(element_id)
     {
-        return document.querySelector("#vid_"+element_id+" video");
+        document.getElementById("div_"+element_id).remove();
     }
-    function removeVideoElement(peer_id)
+
+    function getVideoObj(element_id)
     {
-        document.getElementById("vid_"+peer_id).remove();
+        return document.getElementById("vid_"+element_id);
     }
     
     var myID;
     var _peer_list = {};
     var logger = document.getElementById("log");
     addVideoElement("local_vid", myName);
-    var myVideo = getVideoElement("local_vid");
+    var myVideo = getVideoObj("local_vid");
     myVideo.muted = true;
     myVideo.onloadeddata = ()=>{console.log("W,H: ", myVideo.videoWidth, ", ", myVideo.videoHeight);};
 
     var log_bttn = document.createElement("button");
+    log_bttn.innerText = "click";
     log_bttn.onclick = log_user_list;
+    document.body.appendChild(log_bttn);
     
 
     var mediaConstraints = {
@@ -207,9 +218,9 @@
     {
         _peer_list[peer_id] = new RTCPeerConnection(PC_CONFIG);
 
-        _peer_list[peer_id].onicecandidate = make_ICECandidateEvent_handler(peer_id);
-        _peer_list[peer_id].ontrack = make_TrackEvent_handler(peer_id);
-        _peer_list[peer_id].onnegotiationneeded = make_NegotiationNeededEvent_handler(peer_id);
+        _peer_list[peer_id].onicecandidate = (event) => {handleICECandidateEvent(event, peer_id)};
+        _peer_list[peer_id].ontrack = (event) => {handleTrackEvent(event, peer_id)};
+        _peer_list[peer_id].onnegotiationneeded = () => {handleNegotiationNeededEvent(peer_id)};
         // myPeerConnection.onremovetrack = handleRemoveTrackEvent;
         // myPeerConnection.oniceconnectionstatechange = handleICEConnectionStateChangeEvent;
         // myPeerConnection.onicegatheringstatechange = handleICEGatheringStateChangeEvent;
@@ -217,26 +228,22 @@
     }
 
     
-    function make_NegotiationNeededEvent_handler(peer_id)
+    
+    function handleNegotiationNeededEvent(peer_id)
     {
-        function handleNegotiationNeededEvent()
-        {
-            _peer_list[peer_id].createOffer()
-            .then((offer)=>{return _peer_list[peer_id].setLocalDescription(offer);})
-            .then(()=>{
-                console.log(`sending offer to <${peer_id}> ...`);
-                sendViaServer({
-                    "sender_id": myID,
-                    "target_id": peer_id,
-                    "type": "offer",
-                    "sdp": _peer_list[peer_id].localDescription
-                });
-            })
-            .catch(log_error);
-        }
-
-        return handleNegotiationNeededEvent;
-    }    
+        _peer_list[peer_id].createOffer()
+        .then((offer)=>{return _peer_list[peer_id].setLocalDescription(offer);})
+        .then(()=>{
+            console.log(`sending offer to <${peer_id}> ...`);
+            sendViaServer({
+                "sender_id": myID,
+                "target_id": peer_id,
+                "type": "offer",
+                "sdp": _peer_list[peer_id].localDescription
+            });
+        })
+        .catch(log_error);
+    } 
 
     function handleOfferMsg(msg)
     {   
@@ -273,21 +280,17 @@
     }
 
 
-    function make_ICECandidateEvent_handler(peer_id)
+    
+    function handleICECandidateEvent(event, peer_id)
     {
-        function handleICECandidateEvent(event)
-        {
-            if(event.candidate){
-                sendViaServer({
-                    "sender_id": myID,
-                    "target_id": peer_id,
-                    "type": "new-ice-candidate",
-                    "candidate": event.candidate
-                });
-            }
+        if(event.candidate){
+            sendViaServer({
+                "sender_id": myID,
+                "target_id": peer_id,
+                "type": "new-ice-candidate",
+                "candidate": event.candidate
+            });
         }
-
-        return handleICECandidateEvent;
     }
 
     function handleNewICECandidateMsg(msg)
@@ -297,53 +300,76 @@
         .catch(log_error);
     }
 
-
-    function make_TrackEvent_handler(peer_id)
+    
+    function handleTrackEvent(event, peer_id)
     {
-        function handleTrackEvent(event)
+        console.log(`track event recieved from <${peer_id}> : ${event}`);
+        
+        if(event.streams)
         {
-            console.log(`track event recieved from <${peer_id}> : ${event}`);
-            
-            if(event.streams)
-            {
-                getVideoElement(peer_id).srcObject = event.streams[0];
-            }
+            getVideoObj(peer_id).srcObject = event.streams[0];
         }
-
-        return handleTrackEvent;
     }
+
 
 
 
 </script>
 
 <style type="text/css">
+    body{
+        background-color: rgb(59, 63, 62);
+        color: rgb(250, 250, 250);
+    }
     .grid-container{
-        display: flex;
-        flex-wrap: wrap;
-        flex-direction: row;
-        justify-content: center;
-        align-items: center;
-        background-color: rgb(221, 221, 221);
+        display: grid;        
+        
+        grid-template-columns: auto auto;
+        grid-template-rows: auto auto 200px;
+        gap: 0.8rem;
+        /* background-color: rgb(255, 0, 0); */
+        /* border: 2px solid rgb(0, 0, 0); */
+
+        margin-left: 0.5rem;
+        margin-right: 0.5rem;
+        
+        /* overflow-y: scroll; */
     }
     .grid-item {
-        background-color: rgb(255, 255, 255);
-        border: 1px solid rgb(0, 255, 0);
-        padding: 0px;
+        
+        background-color: rgb(78, 78, 78);
+        /* border: 2px solid rgb(0,255,255); */
+        padding: 6px;
+        border-radius: 3px;
         text-align: center;
-
-        max-width: fit-content;        
-        flex: 1 1 480px;
     }
-    .grid-item video{
-        /* width: 95%; */
-        object-fit: contain;
-        padding: 5px;
+    .vid-wrapper
+    {
+        background-color: rgb(20, 20, 20);
+    }
+    .vid-wrapper video{
+        max-width: 45vw;
+        max-height: 280px;        
     }
     .grid-item .display-name{
         font-weight:lighter;
         font-size: 20px;
         padding: 3px;
+    }
+
+    #control_box{
+        grid-area: 3 / 1 / 4 / 2;
+        background-color: rgb(48, 52, 75);
+        /* width: 50vw; */
+    }
+    #div_local_vid{
+        grid-area: 3 / 2 / 4 / 3;
+        background-color: rgb(48, 52, 75);
+    }
+    #div_local_vid video{        
+        max-width: 50vw;
+        max-height: 150px;
+
     }
 
 </style>
