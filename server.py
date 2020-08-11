@@ -55,7 +55,7 @@ def on_join_room(data):
     _name_of_sid[sid] = display_name
     
     # broadcast to others in the room
-    print("[{}] New memeber joined: {}<{}>".format(room_id, display_name, sid))
+    print("[{}] New member joined: {}<{}>".format(room_id, display_name, sid))
     emit("user-connect", {"sid": sid, "name": display_name}, broadcast=True, include_self=False, room=room_id)
     
     # add to user list maintained on server
@@ -76,7 +76,7 @@ def on_disconnect():
     room_id = _room_of_sid[sid]
     display_name = _name_of_sid[sid]
 
-    print("[{}] Memeber left: {}<{}>".format(room_id, display_name, sid))
+    print("[{}] Member left: {}<{}>".format(room_id, display_name, sid))
     emit("user-disconnect", {"sid": sid}, broadcast=True, include_self=False, room=room_id)
 
     _users_in_room[room_id].remove(sid)
