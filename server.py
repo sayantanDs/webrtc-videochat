@@ -24,13 +24,15 @@ def index():
 def enter_room(room_id):
     if room_id not in session:
         return redirect(url_for("room_landing", room_id=room_id))
-    return render_template("chatroom.html", room_id=room_id, display_name=session[room_id]["name"])
+    return render_template("chatroom.html", room_id=room_id, display_name=session[room_id]["name"], mute_audio=session[room_id]["mute_audio"], mute_video=session[room_id]["mute_video"])
 
 @app.route("/room/<string:room_id>/landing/", methods=["GET", "POST"])
 def room_landing(room_id):
     if request.method == "POST":
         display_name = request.form['display_name']
-        session[room_id] = {"name": display_name}
+        mute_audio = request.form['mute_audio']
+        mute_video = request.form['mute_video']
+        session[room_id] = {"name": display_name, "mute_audio":mute_audio, "mute_video":mute_video}
         return redirect(url_for("enter_room", room_id=room_id))
 
     return render_template("chatroom_landing.html", room_id=room_id)

@@ -18,13 +18,23 @@
 
     <!-- google Material icons -->
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <!-- custom css -->
+    <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
+    <link rel="stylesheet" href="{{url_for('static', filename='chatroom.css')}}">
     
 
-    <script type="text/javascript"> var myRoomID = "{{room_id}}"; var myName = "{{display_name}}"; </script>
+    <script type="text/javascript"> 
+        var myRoomID = "{{room_id}}"; 
+        var myName = "{{display_name}}"; 
+        var audioMuted = "{{mute_audio}}"=="1";
+        var videoMuted = "{{mute_video}}"=="1";
+        console.log(">> {{mute_audio}}, {{mute_video}}", audioMuted, videoMuted);
+    </script>
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Potato Meet</title>
+    <title>Video Chat Room [{{room_id}}]</title>
 </head>
 <body>
     
@@ -37,22 +47,24 @@
         </div>
     </div>
         
-    <div class="container-fluid">
+    <div class="container-fluid px-0 mx-0">
         <div id="video_grid" class="video-grid"></div>
 
         <div id="control_box" class="row control-box shadow">
             <div class="col-7 col-md-8 col-lg-9 d-flex justify-content-around align-items-center button-box">
                 
                 <button id="bttn_mute" class="btn btn-lg btn-outline-secondary rounded-circle">
-                    <span id="mute_icon" class="material-icons pt-1">
+                    <span id="mute_icon" class="material-icons pt-2">
                         mic
-                    </span></button>
+                    </span>
+                </button>
                 <button id="bttn_vid_mute"class="btn btn-lg btn-outline-secondary rounded-circle">
-                    <span id="vid_mute_icon" class="material-icons pt-1">
+                    <span id="vid_mute_icon" class="material-icons pt-2">
                         videocam
-                    </span></button>
+                    </span>
+                </button>
                 <button id="call_end" class="btn btn-lg btn-danger rounded-circle">
-                    <span class="material-icons pt-1">
+                    <span class="material-icons pt-2">
                         call_end
                     </span>
                 </button>
@@ -117,26 +129,36 @@
     var muteBttn = document.getElementById("bttn_mute");
     var muteVidBttn = document.getElementById("bttn_vid_mute");
     var callEndBttn = document.getElementById("call_end");
-    var audioMuted = false;
-    var videoMuted = false;
+
+    function setAudioMuteState(flag)
+    {
+        let local_stream = myVideo.srcObject;
+        local_stream.getAudioTracks().forEach((track)=>{track.enabled = flag;});
+        // switch button icon
+        document.getElementById("mute_icon").innerText = (flag)? "mic_off": "mic";
+    }
+    function setVideoMuteState(flag)
+    {
+        let local_stream = myVideo.srcObject;
+        local_stream.getVideoTracks().forEach((track)=>{track.enabled = !flag;});
+        // switch button icon
+        document.getElementById("vid_mute_icon").innerText = (flag)? "videocam_off": "videocam";
+    }
 
     muteBttn.addEventListener("click", (event)=>{
         audioMuted = !audioMuted;
-        let local_stream = myVideo.srcObject;
-        local_stream.getAudioTracks().forEach((track)=>{track.enabled = !audioMuted;});
-
-        // switch button icon
-        document.getElementById("mute_icon").innerText = (audioMuted)? "mic_off": "mic";
+        setAudioMuteState(audioMuted);        
     });
 
     muteVidBttn.addEventListener("click", (event)=>{
         videoMuted = !videoMuted;
-        let local_stream = myVideo.srcObject;
-        local_stream.getVideoTracks().forEach((track)=>{track.enabled = !videoMuted;});
-
-        // switch button icon
-        document.getElementById("vid_mute_icon").innerText = (videoMuted)? "videocam_off": "videocam";
+        setVideoMuteState(videoMuted);        
     });
+
+    callEndBttn.addEventListener("click", (event)=>{
+        window.location.replace("/");
+    });
+
 
     var mediaConstraints = {
         audio: true, // We want an audio track
@@ -189,7 +211,9 @@
         {
             navigator.mediaDevices.getUserMedia(mediaConstraints)
             .then((stream)=>{
-                myVideo.srcObject = stream;                
+                myVideo.srcObject = stream; 
+                setAudioMuteState(audioMuted);                
+                setVideoMuteState(videoMuted);                
             })
             .catch((e)=>{
                 alert("Error! Unable to start video! ", e);
@@ -245,6 +269,8 @@
         navigator.mediaDevices.getUserMedia(mediaConstraints)
         .then((stream)=>{
             myVideo.srcObject = stream;
+            setAudioMuteState(audioMuted);                
+            setVideoMuteState(videoMuted); 
 
             // send offer to all other members
             for(let peer_id in _peer_list)
@@ -365,76 +391,5 @@
     }
 
 </script>
-
-<style type="text/css">
-    body{
-        background-color: rgb(250,250,250);
-    }
-    .heading
-    {
-        margin: 0;
-        padding: 1rem 1rem 1rem 2rem;
-        background-color: rgb(58, 136, 209);
-        color: #ffffff;
-    }
-    .room-info{
-        color: rgb(206, 235, 255);
-    }
-    .video-grid
-    {  
-        display: grid;
-        grid-auto-flow: dense; 
-        grid-template-columns: auto auto; 
-        gap: 1rem;    
-        padding: 0.5rem;
-    }
-    @media only screen and (max-width: 768px) {
-        /* For mobile phones: */
-        .video-grid {
-            grid-template-columns: 1fr;
-        }
-        .btn-lg{
-            padding: 6px 12px 6px 12px;
-        }
-        
-    }
-    .video-item {
-        
-        background-color: #FEFFFF;
-        text-align: center;
-        padding: 5px;
-        
-    }
-    .vid-wrapper
-    {
-        background-color: rgb(22, 25, 27);
-        padding: 0;
-    }
-    .vid-wrapper video{
-        max-width: 45vw;
-        max-height: 30vh;        
-    }
-    .display-name{
-        color: #17252A;
-        font-family:sans-serif;
-        font-size: 18px;
-        padding: 2px;
-    }
-
-    #control_box{
-        background-color: rgb(250, 250, 250);
-        height: 180px;
-
-        padding: 0.8rem;
-
-        margin: 1.5rem 0.5rem 0.5rem 0.5rem;
-        border-radius: 3px; 
-    }
-    #local_vid{       
-        max-height: 140px;
-        object-fit: contain;
-    } 
-
-</style>
 
 </html>

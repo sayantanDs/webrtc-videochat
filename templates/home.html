@@ -3,20 +3,44 @@
 <head>
     <!-- icon -->
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Popper JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <!-- Latest compiled JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- custom css -->
+    <link rel="stylesheet" href="{{url_for('static', filename='style.css')}}">
     
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Potato Meet</title>
+    <title>Video Chat</title>
 </head>
 <body>
-    <h2>Hello world!</h2>
-    <h3>Welcome to free video chat room!</h3>
-    <hr>
-    <p style="color: rgb(136, 136, 136);">This is completely unreliable and insecure!</p>
-    <form method="POST">
-        <label style="font-size: 20px; text-align: center; color: rgb(52, 125, 228);" for="room_id">Enter a room name and join!</label>
-        <input type="text" name="room_id" id="room_id">
-        <input type="submit" value="Join">
-    </form>
+
+    <div class="heading mb-4">
+        <h1 class="display-4">Video Chat</h1>
+    </div>
+    <div class="container text-center mt-5">
+        <h4>Welcome to video chat!</h4>
+        <p>
+            Enter a custom room name, and click join! <br> 
+            Share the room name with your friends, so that they can join too!
+        </p>
+
+        <form method="POST" class="form shadow" style="width:400px; margin-left: auto; margin-right: auto;">
+            <div class="input-group mb-3">
+                <input type="text" name="room_id" id="room_id" class="form-control" placeholder="Custom Room Name">
+                <div class="input-group-append">
+                    <input type="submit" value="Join" class="btn btn-primary">
+                </div>
+            </div>
+        </form>
+    </div>
+    
 </body>
 </html>
