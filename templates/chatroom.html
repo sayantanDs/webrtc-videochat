@@ -386,14 +386,23 @@
         grid-auto-flow: dense; 
         grid-template-columns: auto auto; 
         gap: 1rem;    
-        padding: 1rem;
+        padding: 0.5rem;
+    }
+    @media only screen and (max-width: 768px) {
+        /* For mobile phones: */
+        .video-grid {
+            grid-template-columns: 1fr;
+        }
+        .btn-lg{
+            padding: 6px 12px 6px 12px;
+        }
+        
     }
     .video-item {
         
         background-color: #FEFFFF;
         text-align: center;
-        padding: 6px;
-        border-radius: 3px;
+        padding: 5px;
         
     }
     .vid-wrapper
