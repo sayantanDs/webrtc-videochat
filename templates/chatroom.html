@@ -7,6 +7,19 @@
     <!-- socketio -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.3.0/socket.io.js" integrity="sha512-v8ng/uGxkge3d1IJuEo6dJP8JViyvms0cly9pnbfRxT6/31c3dRWxIiwGnMSWwZjHKOuY3EVmijs7k1jz/9bLA==" crossorigin="anonymous"></script>
     
+    <!-- Latest compiled and minified CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- jQuery library -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <!-- Popper JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <!-- Latest compiled JavaScript -->
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <!-- google Material icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+
     <script type="text/javascript"> var myRoomID = "{{room_id}}"; var myName = "{{display_name}}"; </script>
 
     <meta charset="UTF-8">
@@ -14,23 +27,50 @@
     <title>Potato Meet</title>
 </head>
 <body>
-    <h2>Welcome to {{room_id}}</h2>
-    <h4>You have joined as {{display_name}}</h4>
-    <p>Ask your friends to join using room id: {{room_id}}</p>
-    <hr>
+    
+    <div class="heading mb-4">
+        <h1 class="display-4">Video Chat</h1>
+        <div class="room-info">
+            <h2>Room: {{room_id}}</h2>
+            <h4>You have joined as {{display_name}}</h4>
+            <h6>Ask your friends to join using room id: {{room_id}}</h6>
+        </div>
+    </div>
+        
+    <div class="container-fluid">
+        <div id="video_grid" class="video-grid"></div>
 
-    <div id="video_grid" class="grid-container">
-
-        <div id="control_box" class="control-box"></div>
+        <div id="control_box" class="row control-box shadow">
+            <div class="col-7 col-md-8 col-lg-9 d-flex justify-content-around align-items-center button-box">
+                
+                <button id="bttn_mute" class="btn btn-lg btn-outline-secondary rounded-circle">
+                    <span id="mute_icon" class="material-icons pt-1">
+                        mic
+                    </span></button>
+                <button id="bttn_vid_mute"class="btn btn-lg btn-outline-secondary rounded-circle">
+                    <span id="vid_mute_icon" class="material-icons pt-1">
+                        videocam
+                    </span></button>
+                <button id="call_end" class="btn btn-lg btn-danger rounded-circle">
+                    <span class="material-icons pt-1">
+                        call_end
+                    </span>
+                </button>
+            </div>
+            <div id="div_local_vid" class="col-5 col-md-4 col-lg-3 video-item ml-auto">
+                <div class="vid-wrapper">
+                    <video id="local_vid" autoplay muted></video>
+                </div>
+            </div>
+        </div>
     </div>
     
-
-    <div id="log"></div>
 </body>
 
 <script type="text/javascript">
     var videoGrid = document.getElementById("video_grid");
-    function addVideoElement(element_id, display_name)
+    
+    function makeVideoElement(element_id, display_name)
     {
         let wrapper_div = document.createElement("div");
         let vid_wrapper = document.createElement("div");
@@ -38,17 +78,25 @@
         let name_text = document.createElement("div");
 
         wrapper_div.id = "div_"+element_id;
-        wrapper_div.className = "grid-item";
-        vid_wrapper.className = "vid-wrapper";
         vid.id = "vid_"+element_id;
-        vid.autoplay = true;        
+
+        wrapper_div.className = "shadow video-item";
+        vid_wrapper.className = "vid-wrapper";
         name_text.className = "display-name";
+        
+        vid.autoplay = true;        
         name_text.innerText = display_name;
 
-        vid_wrapper.appendChild(vid)
+        vid_wrapper.appendChild(vid);
         wrapper_div.appendChild(vid_wrapper);
         wrapper_div.appendChild(name_text);
-        videoGrid.appendChild(wrapper_div);
+
+        return wrapper_div;
+    }
+    
+    function addVideoElement(element_id, display_name)
+    {        
+        videoGrid.appendChild(makeVideoElement(element_id, display_name));
     }
     function removeVideoElement(element_id)
     {
@@ -62,17 +110,33 @@
     
     var myID;
     var _peer_list = {};
-    var logger = document.getElementById("log");
-    addVideoElement("local_vid", myName);
-    var myVideo = getVideoObj("local_vid");
-    myVideo.muted = true;
+    
+    var myVideo = document.getElementById("local_vid");
     myVideo.onloadeddata = ()=>{console.log("W,H: ", myVideo.videoWidth, ", ", myVideo.videoHeight);};
 
-    var log_bttn = document.createElement("button");
-    log_bttn.innerText = "click";
-    log_bttn.onclick = log_user_list;
-    document.body.appendChild(log_bttn);
-    
+    var muteBttn = document.getElementById("bttn_mute");
+    var muteVidBttn = document.getElementById("bttn_vid_mute");
+    var callEndBttn = document.getElementById("call_end");
+    var audioMuted = false;
+    var videoMuted = false;
+
+    muteBttn.addEventListener("click", (event)=>{
+        audioMuted = !audioMuted;
+        let local_stream = myVideo.srcObject;
+        local_stream.getAudioTracks().forEach((track)=>{track.enabled = !audioMuted;});
+
+        // switch button icon
+        document.getElementById("mute_icon").innerText = (audioMuted)? "mic_off": "mic";
+    });
+
+    muteVidBttn.addEventListener("click", (event)=>{
+        videoMuted = !videoMuted;
+        let local_stream = myVideo.srcObject;
+        local_stream.getVideoTracks().forEach((track)=>{track.enabled = !videoMuted;});
+
+        // switch button icon
+        document.getElementById("vid_mute_icon").innerText = (videoMuted)? "videocam_off": "videocam";
+    });
 
     var mediaConstraints = {
         audio: true, // We want an audio track
@@ -96,14 +160,12 @@
         let peer_id = data["sid"];
         let display_name = data["name"];
         _peer_list[peer_id] = undefined; // add new user to user list
-        log_user_list();
         addVideoElement(peer_id, display_name);
     });
     socket.on("user-disconnect", (data)=>{
         console.log("user-disconnect ", data);
         let peer_id = data["sid"];
         delete _peer_list[peer_id]; // remove user from user list
-        log_user_list();
         removeVideoElement(peer_id);
     });
     socket.on("user-list", (data)=>{
@@ -120,8 +182,6 @@
                 _peer_list[peer_id] = undefined;
                 addVideoElement(peer_id, display_name);
             }            
-
-            log_user_list();
 
             start_webrtc();
         }
@@ -141,16 +201,13 @@
 
     function log_user_list()
     {
-        logger.innerText = "";
         for(let key in _peer_list)
         {
-            logger.innerText += `${key}:${_peer_list[key]}\n`;
+            console.log(`${key}: ${_peer_list[key]}`);
         }
     }
 
-    //---------------webrtc--------------------
-
-    
+    //---------------webrtc--------------------    
 
     var PC_CONFIG = {
         iceServers: [
@@ -221,10 +278,6 @@
         _peer_list[peer_id].onicecandidate = (event) => {handleICECandidateEvent(event, peer_id)};
         _peer_list[peer_id].ontrack = (event) => {handleTrackEvent(event, peer_id)};
         _peer_list[peer_id].onnegotiationneeded = () => {handleNegotiationNeededEvent(peer_id)};
-        // myPeerConnection.onremovetrack = handleRemoveTrackEvent;
-        // myPeerConnection.oniceconnectionstatechange = handleICEConnectionStateChangeEvent;
-        // myPeerConnection.onicegatheringstatechange = handleICEGatheringStateChangeEvent;
-        // myPeerConnection.onsignalingstatechange = handleSignalingStateChangeEvent;
     }
 
     
@@ -311,66 +364,67 @@
         }
     }
 
-
-
-
 </script>
 
 <style type="text/css">
     body{
-        background-color: rgb(59, 63, 62);
-        color: rgb(250, 250, 250);
+        background-color: rgb(250,250,250);
     }
-    .grid-container{
-        display: grid;        
-        
-        grid-template-columns: auto auto;
-        grid-template-rows: auto auto 200px;
-        gap: 0.8rem;
-        /* background-color: rgb(255, 0, 0); */
-        /* border: 2px solid rgb(0, 0, 0); */
-
-        margin-left: 0.5rem;
-        margin-right: 0.5rem;
-        
-        /* overflow-y: scroll; */
+    .heading
+    {
+        margin: 0;
+        padding: 1rem 1rem 1rem 2rem;
+        background-color: rgb(58, 136, 209);
+        color: #ffffff;
     }
-    .grid-item {
+    .room-info{
+        color: rgb(206, 235, 255);
+    }
+    .video-grid
+    {  
+        display: grid;
+        grid-auto-flow: dense; 
+        grid-template-columns: auto auto; 
+        gap: 1rem;    
+        padding: 1rem;
+    }
+    .video-item {
         
-        background-color: rgb(78, 78, 78);
-        /* border: 2px solid rgb(0,255,255); */
+        background-color: #FEFFFF;
+        text-align: center;
         padding: 6px;
         border-radius: 3px;
-        text-align: center;
+        
     }
     .vid-wrapper
     {
-        background-color: rgb(20, 20, 20);
+        background-color: rgb(22, 25, 27);
+        padding: 0;
     }
     .vid-wrapper video{
         max-width: 45vw;
-        max-height: 280px;        
+        max-height: 30vh;        
     }
-    .grid-item .display-name{
-        font-weight:lighter;
-        font-size: 20px;
-        padding: 3px;
+    .display-name{
+        color: #17252A;
+        font-family:sans-serif;
+        font-size: 18px;
+        padding: 2px;
     }
 
     #control_box{
-        grid-area: 3 / 1 / 4 / 2;
-        background-color: rgb(48, 52, 75);
-        /* width: 50vw; */
-    }
-    #div_local_vid{
-        grid-area: 3 / 2 / 4 / 3;
-        background-color: rgb(48, 52, 75);
-    }
-    #div_local_vid video{        
-        max-width: 50vw;
-        max-height: 150px;
+        background-color: rgb(250, 250, 250);
+        height: 180px;
 
+        padding: 0.8rem;
+
+        margin: 1.5rem 0.5rem 0.5rem 0.5rem;
+        border-radius: 3px; 
     }
+    #local_vid{       
+        max-height: 140px;
+        object-fit: contain;
+    } 
 
 </style>
 
