@@ -32,12 +32,14 @@
             Share the room name with your friends, so that they can join too!
         </p>
 
-        <form method="POST" class="form shadow" style="width:400px; margin-left: auto; margin-right: auto;">
+        <form id="room_form" method="POST" class="form shadow" style="max-width:400px; margin-left: auto; margin-right: auto;">
             <div class="input-group mb-3">
-                <input type="text" name="room_id" id="room_id" class="form-control" placeholder="Custom Room Name">
+                <input type="text" name="room_id" id="room_id" class="form-control" placeholder="Custom Room Name" autofocus required>
+                <div class="invalid-feedback">Please fill out this field.</div>
                 <div class="input-group-append">
                     <input type="submit" value="Join" class="btn btn-primary">
                 </div>
+                
             </div>
         </form>
     </div>

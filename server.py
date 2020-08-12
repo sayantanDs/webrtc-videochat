@@ -16,18 +16,18 @@ _name_of_sid = {} # stores display name of users
 def index():
     if request.method == "POST":
         room_id = request.form['room_id']
-        return redirect(url_for("room_landing", room_id=room_id))
+        return redirect(url_for("entry_checkpoint", room_id=room_id))
 
     return render_template("home.html")
 
 @app.route("/room/<string:room_id>/")
 def enter_room(room_id):
     if room_id not in session:
-        return redirect(url_for("room_landing", room_id=room_id))
+        return redirect(url_for("entry_checkpoint", room_id=room_id))
     return render_template("chatroom.html", room_id=room_id, display_name=session[room_id]["name"], mute_audio=session[room_id]["mute_audio"], mute_video=session[room_id]["mute_video"])
 
-@app.route("/room/<string:room_id>/landing/", methods=["GET", "POST"])
-def room_landing(room_id):
+@app.route("/room/<string:room_id>/checkpoint/", methods=["GET", "POST"])
+def entry_checkpoint(room_id):
     if request.method == "POST":
         display_name = request.form['display_name']
         mute_audio = request.form['mute_audio']
@@ -35,7 +35,7 @@ def room_landing(room_id):
         session[room_id] = {"name": display_name, "mute_audio":mute_audio, "mute_video":mute_video}
         return redirect(url_for("enter_room", room_id=room_id))
 
-    return render_template("chatroom_landing.html", room_id=room_id)
+    return render_template("chatroom_checkpoint.html", room_id=room_id)
     
 
 
