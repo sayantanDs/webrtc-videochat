@@ -36,16 +36,17 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Chat Room [{{room_id}}]</title>
+    <title>Video Chat [{{room_id}}]</title>
 </head>
 <body>
     
     <div class="heading mb-4">
         <h1 class="display-4">Video Chat</h1>
         <div class="room-info">
-            <h2>Room: {{room_id}}</h2>
-            <h4>You have joined as {{display_name}}</h4>
-            <h6>Ask your friends to join using room id: {{room_id}}</h6>
+            <h3>Room: <span class="heading-mark">{{room_id}}</span></h3>
+            <h5>You have joined as <span class="heading-mark">{{display_name}}</span></h5>
+            <div>Ask your friends to join using the room id: <span class="heading-mark">{{room_id}}</span></div>
+            <div id="room_link"></div>
         </div>
     </div>
         

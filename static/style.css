@@ -8,3 +8,8 @@ body{
     background-color: rgb(49, 46, 42);
     color: rgb(255, 207, 149);
 }
+.heading-mark{
+    color: rgb(255, 244, 230);
+    font-weight: bold;
+    padding: 3px;
+;}

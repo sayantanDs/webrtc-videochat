@@ -19,6 +19,8 @@ document.addEventListener("DOMContentLoaded", (event)=>{
         window.location.replace("/");
     });
 
+    document.getElementById("room_link").innerHTML=`or the link: <span class="heading-mark">${window.location.href}</span>`;
+
 });
 
 
