@@ -51,7 +51,7 @@ socket.on("user-connect", (data)=>{
 socket.on("user-disconnect", (data)=>{
     console.log("user-disconnect ", data);
     let peer_id = data["sid"];
-    delete _peer_list[peer_id]; // remove user from user list
+    closeConnection(peer_id);
     removeVideoElement(peer_id);
 });
 socket.on("user-list", (data)=>{
@@ -70,6 +70,18 @@ socket.on("user-list", (data)=>{
         start_webrtc();
     }    
 });
+
+function closeConnection(peer_id)
+{
+    if(peer_id in _peer_list)
+    {
+        _peer_list[peer_id].onicecandidate = null;
+        _peer_list[peer_id].ontrack = null;
+        _peer_list[peer_id].onnegotiationneeded = null;
+
+        delete _peer_list[peer_id]; // remove user from user list
+    }
+}
 
 function log_user_list()
 {
@@ -177,6 +189,7 @@ function handleOfferMsg(msg)
     .then(()=>{return _peer_list[peer_id].createAnswer();})
     .then((answer)=>{return _peer_list[peer_id].setLocalDescription(answer);})
     .then(()=>{
+        console.log(`sending answer to <${peer_id}> ...`);
         sendViaServer({
             "sender_id": myID,
             "target_id": peer_id,
@@ -210,6 +223,7 @@ function handleICECandidateEvent(event, peer_id)
 
 function handleNewICECandidateMsg(msg)
 {
+    console.log(`ICE candidate recieved from <${peer_id}>`);
     var candidate = new RTCIceCandidate(msg.candidate);
     _peer_list[msg["sender_id"]].addIceCandidate(candidate)
     .catch(log_error);
@@ -218,7 +232,7 @@ function handleNewICECandidateMsg(msg)
 
 function handleTrackEvent(event, peer_id)
 {
-    console.log(`track event recieved from <${peer_id}> : ${event}`);
+    console.log(`track event recieved from <${peer_id}>`);
     
     if(event.streams)
     {

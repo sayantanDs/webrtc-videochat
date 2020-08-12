@@ -51,7 +51,14 @@ function addVideoElement(element_id, display_name)
     document.getElementById("video_grid").appendChild(makeVideoElement(element_id, display_name));
 }
 function removeVideoElement(element_id)
-{
+{    
+    let v = getVideoObj(element_id);
+    if(v.srcObject){
+        v.srcObject.getTracks().forEach(track => track.stop());
+    }
+    v.removeAttribute("srcObject");
+    v.removeAttribute("src");
+
     document.getElementById("div_"+element_id).remove();
 }
 
