@@ -3,7 +3,7 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 
 # Next two lines are for the issue: https://github.com/miguelgrinberg/python-engineio/issues/142
 from engineio.payload import Payload
-Payload.max_decode_packets = 50
+Payload.max_decode_packets = 200
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = "thisismys3cr3tk3y"
